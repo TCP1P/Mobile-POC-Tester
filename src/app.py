@@ -5,9 +5,11 @@ from threading import Thread
 from time import sleep
 import os
 import uuid
+import re
+import signal
 
 from type import Status, Client, Queue
-from utils import run_process
+from utils import run_process, timeout_handler
 
 from lamda.client import Device
 from pow import Challenge, check
@@ -31,14 +33,15 @@ print("----------------------------------------------")
 for client in clients:
     print(f"Challenge Name: {client.CHALLENGE_NAME}")
     print(f"Main Package Name: {client.MAIN_PACKAGE_NAME}")
-    print(f"POC Package Name: {client.POC_PACKAGE_NAME}")
     print(f"Process Timeout: {client.PROCESS_TIMEOUT}")
     print("----------------------------------------------")
 
-challenge_files = glob.glob("challenges/*/challenge.apk")
+challenge_files = glob.glob("challenges/*/*.apk")
 
 for challenge_file in challenge_files:
     run_process('adb', ['install', '-r', challenge_file])
+
+signal.signal(signal.SIGALRM, timeout_handler)
 
 class QueueThread(Thread):
     def __init__(self):
@@ -48,20 +51,18 @@ class QueueThread(Thread):
         while True:
             for q in queue:
                 if q.status == Status.PENDING_QUEUE:
+                    pocPackageName = None
+                    signal.alarm(q.client.PROCESS_TIMEOUT)
                     try:
                         q.status = Status.INSTALLING_PROOF_OF_CONCEPT
 
                         out, err = run_process('aapt', ['dump', 'badging', f'uploads/' + q.id + '.apk'])
-                        if 'package: name=\'' + q.client.POC_PACKAGE_NAME + '\'' not in out:
-                            q.status = Status.ERROR
-                            q.error = 'Invalid package name! Please set your package name to "' + q.client.POC_PACKAGE_NAME + '".'
-                            continue
-
-                        _, err = run_process('adb', ['uninstall', q.client.POC_PACKAGE_NAME])
                         if err:
                             q.status = Status.ERROR
                             q.error = err
                             continue
+
+                        pocPackageName = re.search(r"package: name='(.*?)'", out).group(1)
 
                         out, err = run_process('adb', ['install', '-r', 'uploads/' + q.id + '.apk'])
                         if 'Success' not in out:
@@ -70,24 +71,25 @@ class QueueThread(Thread):
                             continue
 
                         if q.client.callback:
-                            q.client.callback(device, q)
+                            q.client.callback(device, pocPackageName, q)
 
                         q.status = Status.TAKING_SCREENSHOT
                         device.execute_script('screencap -p /data/local/tmp/screenshot.png')
                         device.download_file('/data/local/tmp/screenshot.png', 'screenshots/' + q.id + '.png')
                         device.execute_script('rm -f /data/local/tmp/screenshot.png')
-                        q.status = Status.CLEANING_UP
-                        _, err = run_process('adb', ['uninstall', q.client.POC_PACKAGE_NAME])
-                        if err:
-                            q.status = Status.ERROR
-                            q.error = err
-                            continue
                         q.status = Status.COMPLETED
                     except Exception as e:
                         traceback.print_exc()
 
                         q.status = Status.ERROR
                         q.error = str(e)
+                    finally:
+                        signal.alarm(0)
+                        if pocPackageName:
+                            _, err = run_process('adb', ['uninstall', pocPackageName])
+                            if err:
+                                q.status = Status.ERROR
+                                q.error = err
             sleep(1)
 
 @app.before_request

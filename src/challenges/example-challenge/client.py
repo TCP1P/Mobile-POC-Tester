@@ -1,23 +1,24 @@
 import random
 from lamda.client import Device, Point, ApplicationOpStub, GrantType
 from time import sleep
-from type import Status
+from type import Status, Queue
 
-POC_PACKAGE_NAME = "example.exploit"
-MAIN_PACKAGE_NAME ="com.aimar.id.example"
-PROCESS_TIMEOUT = 30
+MAIN_PACKAGE_NAME = "com.aimar.id.example"
+PROCESS_TIMEOUT = 5*60 # 5 minutes
 CHALLENGE_NAME = "Example Challenge"
 
-def run_exploit(device: Device):
-    exploit: ApplicationOpStub = device.application(POC_PACKAGE_NAME)
+
+def run_exploit(device: Device, pocPackageName: str):
+    exploit: ApplicationOpStub = device.application(pocPackageName)
     permissions = exploit.permissions()
     for permission in permissions:
-        if permission.startswith('android.permission'):
+        if permission.startswith("android.permission"):
             exploit.grant(permission, mode=GrantType.GRANT_ALLOW)
         exploit.start()
 
     while not exploit.is_foreground():
         pass
+
 
 def run_application(device: Device):
     app: ApplicationOpStub = device.application(MAIN_PACKAGE_NAME)
@@ -31,13 +32,13 @@ def run_application(device: Device):
     while not app.is_foreground():
         pass
 
-def callback(device: Device, q):
+
+def callback(device: Device, pocPackageName: str, q: Queue):
     q.status = Status.RUNNING_PROOF_OF_CONCEPT
 
-    run_exploit(device)
+    run_exploit(device, pocPackageName)
 
     sleep(2.5)
-
 
     # just uncomment this line if you want to run the vulnerable application
     # q.status = Status.RUNNING_VULNERABLE_APPLICATION
@@ -52,4 +53,3 @@ def callback(device: Device, q):
         x = random.randint(left, right)
         y = random.randint(top, bottom)
         device.click(Point(x=x, y=y))
-

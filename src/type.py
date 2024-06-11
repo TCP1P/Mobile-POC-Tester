@@ -23,4 +23,4 @@ class Client:
     CHALLENGE_NAME: str
     POC_PACKAGE_NAME: str
     USER: int
-    def callback(device: Device, q: Queue): pass
+    def callback(device: Device, pocPackageName: str, q: Queue): pass
