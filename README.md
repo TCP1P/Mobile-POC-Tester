@@ -40,3 +40,8 @@ To use the POC tester, you can modify the folders inside the `challenges` direct
 │       ├── *.apk
 │       └── client.py
 ```
+
+## Contributors
+
+- @aimardcr
+- @dimasma0305
