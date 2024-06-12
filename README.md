@@ -43,5 +43,5 @@ To use the POC tester, you can modify the folders inside the `challenges` direct
 
 ## Contributors
 
-- @aimardcr
-- @dimasma0305
+- [@aimardcr](https://github.com/aimardcr)
+- [@dimasma0305](https://github.com/dimasma0305)
