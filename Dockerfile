@@ -52,4 +52,4 @@ COPY ./src/uploads/ ./uploads/
 COPY ./src/challenges/ ./challenges/
 
 EXPOSE 5000
-CMD ["/bin/bash", "-c", "./start.sh"]
+CMD ["./start.sh"]

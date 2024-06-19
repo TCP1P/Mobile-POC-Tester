@@ -21,6 +21,7 @@ app.secret_key = os.urandom(24)
 
 device = Device('localhost', 65000)
 queue: List[Queue] = []
+DISABLE_POW_CHECK = os.getenv("DISABLE_POW_CHECK", "false").lower() == "true"
 
 clients: List[Client] = []
 client_files = glob.glob("challenges/*/client.py")
@@ -108,13 +109,14 @@ def index():
 @app.route('/upload', methods=['POST'])
 def upload():
     try:
-        solution = request.form.get('solution')
-        challenge = Challenge.from_string(session.get('challenge'))
+        if not DISABLE_POW_CHECK:
+            solution = request.form.get('solution')
+            challenge = Challenge.from_string(session.get('challenge'))
 
-        if not check(challenge, solution):
-            return jsonify({'status': 'error', 'message': 'Incorrect solution!'})
+            if not check(challenge, solution):
+                return jsonify({'status': 'error', 'message': 'Incorrect solution!'})
 
-        session.clear()
+            session.clear()
     except:
         return jsonify({'status': 'error', 'message': 'Invalid solution!'})
 
