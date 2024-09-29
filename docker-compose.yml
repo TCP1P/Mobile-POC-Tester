@@ -1,10 +1,37 @@
 services:
-  web:
-    build: .
+  device:
+    build: 
+      context: device
+      dockerfile: Dockerfile
     privileged: true
-    volumes:
-      - ./src/challenges:/app/src/challenges
+    networks:
+      - default
+    restart: always
+
+  web:
+    build: 
+      context: web
+      dockerfile: Dockerfile
     ports:
-      - "5000:5000"
+      - "42586:5000"
+    depends_on:
+      - device
+    networks:
+      - default
+    restart: always
+
+  hijacker-pin2flag:
+    build: 
+      context: hijacker-pin2flag
+      dockerfile: Dockerfile
     environment:
-      DISABLE_POW_CHECK: "true"
+      - FLAG=INTECHFEST{T4pj4ck1ng_In_Andr01d?!?!}
+      - POW_DIFFICULTY=250000
+      - PIN=558102
+    ports:
+      - "53655:5001"
+    restart: always
+
+networks:
+  default:
+    driver: bridge
