@@ -25,6 +25,8 @@ clients: List[Client] = []
 client_files = glob.glob("challenges/*/client.py")
 for client_file in client_files:
     client: Client = import_module(client_file.replace("/", ".")[:-3])
+    dirname = client_file.split("/")
+    client.CHALLENGE_NAME = dirname[1]
     clients.append(client)
 
 signal.signal(signal.SIGALRM, timeout_handler)
@@ -43,7 +45,7 @@ class QueueThread(Thread):
                         q.status = Status.INITIALIZING
 
                         # run_adb(['uninstall', q.client.MAIN_PACKAGE_NAME])
-                        
+
                         out, err = run_adb(['shell', 'pm', 'list', 'packages', q.client.MAIN_PACKAGE_NAME])
                         if q.client.MAIN_PACKAGE_NAME not in out:
                             out, err = run_adb(['install', '-r', f'challenges/{q.client.CHALLENGE_NAME}/challenge.apk'])
@@ -92,7 +94,6 @@ class QueueThread(Thread):
                         q.status = Status.ERROR
                         q.error = str(e)
                     finally:
-                        ...
                         signal.alarm(0)
 
                         if package_name:
