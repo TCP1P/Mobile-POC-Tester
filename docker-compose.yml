@@ -4,6 +4,8 @@ services:
       context: device
       dockerfile: Dockerfile
     privileged: true
+    environment:
+      SU_NAME: ${SU_NAME}
     networks:
       - default
     restart: always
@@ -16,6 +18,8 @@ services:
       - "5000:5000"
     depends_on:
       - device
+    environment:
+      SU_NAME: ${SU_NAME}
     networks:
       - default
     restart: always

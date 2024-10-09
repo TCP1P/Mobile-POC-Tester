@@ -4,3 +4,4 @@
 !/web/src/screenshots/.gitkeep
 /web/src/challenges/*
 !/web/src/challenges/.gitkeep
+/.env
