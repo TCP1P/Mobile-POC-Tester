@@ -20,6 +20,7 @@ services:
       - device
     environment:
       SU_NAME: ${SU_NAME}
+      DEV: true
     networks:
       - default
     restart: always
