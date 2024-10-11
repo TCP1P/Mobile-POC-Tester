@@ -6,6 +6,7 @@ services:
     privileged: true
     environment:
       SU_NAME: ${SU_NAME}
+      MAX_MEMORY: "8192"
     networks:
       - default
     restart: always
@@ -20,7 +21,7 @@ services:
       - device
     environment:
       SU_NAME: ${SU_NAME}
-      DEV: true
+      # DEV: true
     networks:
       - default
     restart: always
