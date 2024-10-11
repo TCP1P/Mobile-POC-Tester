@@ -2,11 +2,16 @@ import subprocess
 import re
 import sys
 from time import sleep
+import os
 
-SU_PATH = '/system/xbin/su-48916722dabda77a42e59b85751e81bf'
+SU_PATH = '/system/xbin/' + os.environ.get("SU_NAME")
+
+print("SU_PATH:", SU_PATH)
 
 def run_process(process, args):
-    result = subprocess.run([process] + args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
+    args = [process] + args
+    print(args, file=sys.stderr)
+    result = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30)
     stdout = result.stdout.decode('utf-8')
     stderr = result.stderr.decode('utf-8')
     print(stdout, file=sys.stderr)
@@ -14,11 +19,8 @@ def run_process(process, args):
 
     return stdout, stderr
 
-class TimeoutException(Exception):
-    pass
-
 def timeout_handler(signum, frame):
-    raise TimeoutException
+    raise TimeoutError()
 
 def run_adb(args):
     return run_process('adb', ['-H', 'device', '-P', '5037'] + args)
@@ -46,13 +48,6 @@ def start_app(package_name: str):
     stop_app(package_name)
 
     run_adb(['shell', 'monkey', '-p', package_name, '1'])
-
-    while True:
-        out, _ = run_adb(['shell', 'dumpsys', 'window', 'windows'])
-        if package_name in out:
-            break
-
-        sleep(1)
 
 def touch_screen(x: int, y: int):
     run_adb(['shell', 'input', 'tap', str(x), str(y)])

@@ -46,7 +46,7 @@ function start_device() {
   kill_emulator
   start_emulator
   wait_for_device
-  
+
   echo "[i] Disabling security..."
 
   adb root
@@ -80,8 +80,18 @@ function start_device() {
   adb remount
   sleep 2.5
 
-  adb shell mv /system/xbin/su /system/xbin/su-48916722dabda77a42e59b85751e81bf
-  adb shell chmod 711 /system/xbin
+  if [ -n "$SU_NAME" ]; then
+      echo "SU_PATH exists: $SU_NAME"
+
+      adb shell mv "/system/xbin/su" "/system/xbin/$SU_NAME"
+
+      adb shell chmod 711 /system/xbin
+
+      echo "su moved to /system/xbin/$SU_NAME and permissions set on /system/xbin."
+  else
+      echo "Error: SU_PATH does not exist or is not set."
+      exit 1
+  fi
 
   echo "[i] Device is ready!"
 };
@@ -98,7 +108,7 @@ function main() {
 
     if [[ $(adb devices | grep emulator | wc -l) -eq 0 ]]; then
       echo "[i] Device is not connected, restarting emulator..."
-      
+
       kill_emulator
 
       sleep 2.5

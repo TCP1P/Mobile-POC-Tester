@@ -2,3 +2,6 @@
 !/web/src/uploads/.gitkeep
 /web/src/screenshots/*
 !/web/src/screenshots/.gitkeep
+/web/src/challenges/*
+!/web/src/challenges/.gitkeep
+/.env

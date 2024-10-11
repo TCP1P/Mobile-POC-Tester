@@ -21,7 +21,7 @@ To install the POC tester, follow these steps:
 3. Run Docker Compose:
 
     ```bash
-    docker compose up --build
+    docker compose up --build --force-recreate
     ```
 
 4. Open your browser and go to port 5000:

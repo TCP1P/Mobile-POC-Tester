@@ -16,6 +16,10 @@ from pow import Challenge, check
 import glob
 from importlib import import_module
 
+DEV = os.environ.get("DEV")
+
+print("DEV:", DEV)
+
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
@@ -25,6 +29,8 @@ clients: List[Client] = []
 client_files = glob.glob("challenges/*/client.py")
 for client_file in client_files:
     client: Client = import_module(client_file.replace("/", ".")[:-3])
+    dirname = client_file.split("/")
+    client.CHALLENGE_NAME = dirname[1]
     clients.append(client)
 
 signal.signal(signal.SIGALRM, timeout_handler)
@@ -38,7 +44,6 @@ class QueueThread(Thread):
             for q in queue:
                 if q.status == Status.PENDING_QUEUE:
                     package_name = None
-                    signal.alarm(q.client.PROCESS_TIMEOUT)
                     try:
                         q.status = Status.INITIALIZING
 
@@ -92,9 +97,6 @@ class QueueThread(Thread):
                         q.status = Status.ERROR
                         q.error = str(e)
                     finally:
-                        ...
-                        signal.alarm(0)
-
                         if package_name:
                             run_adb(['uninstall', package_name])
 
@@ -110,16 +112,17 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload():
-    try:
-        solution = request.form.get('solution')
-        challenge = Challenge.from_string(session.get('challenge'))
+    if not DEV:
+        try:
+            solution = request.form.get('solution')
+            challenge = Challenge.from_string(session.get('challenge'))
 
-        if not check(challenge, solution):
-            return jsonify({'status': 'error', 'message': 'Incorrect solution!'})
+            if not check(challenge, solution):
+                return jsonify({'status': 'error', 'message': 'Incorrect solution!'})
 
-        session.clear()
-    except:
-        return jsonify({'status': 'error', 'message': 'Invalid solution!'})
+            session.clear()
+        except:
+            return jsonify({'status': 'error', 'message': 'Invalid solution!'})
 
     chall_name = request.form.get('chall_name')
     if not chall_name:

@@ -18,7 +18,7 @@ class Status:
 
 class Client:
     MAIN_PACKAGE_NAME: str
-    PROCESS_TIMEOUT: str
+    PROCESS_TIMEOUT: float
     CHALLENGE_NAME: str
     POC_PACKAGE_NAME: str
     USER: int

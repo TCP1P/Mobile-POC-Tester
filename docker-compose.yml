@@ -1,21 +1,26 @@
 services:
   device:
-    build: 
+    build:
       context: device
       dockerfile: Dockerfile
     privileged: true
+    environment:
+      SU_NAME: ${SU_NAME}
     networks:
       - default
     restart: always
 
   web:
-    build: 
+    build:
       context: web
       dockerfile: Dockerfile
     ports:
-      - "42586:5000"
+      - "5000:5000"
     depends_on:
       - device
+    environment:
+      SU_NAME: ${SU_NAME}
+      DEV: true
     networks:
       - default
     restart: always
