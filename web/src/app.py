@@ -11,7 +11,7 @@ import re
 import signal
 
 from type import Status, Client, Queue
-from utils import run_process, run_adb, timeout_handler
+from utils import run_process, run_adb, timeout_handler, stop_app
 
 from pow import Challenge, check
 
@@ -48,6 +48,9 @@ class QueueThread(Thread):
                     package_name = None
                     try:
                         q.status = Status.INITIALIZING
+
+                        for c in clients:
+                            stop_app(c.MAIN_PACKAGE_NAME)
 
                         run_adb(['uninstall', q.client.MAIN_PACKAGE_NAME])
                         
