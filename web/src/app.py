@@ -4,8 +4,6 @@ from typing import List
 from flask import Flask, render_template, request, jsonify, send_file, session
 from threading import Thread
 from time import sleep
-from gevent import pywsgi
-from geventwebsocket.handler import WebSocketHandler
 
 import os
 import uuid
