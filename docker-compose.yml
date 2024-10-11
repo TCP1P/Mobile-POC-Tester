@@ -20,18 +20,6 @@ services:
       - default
     restart: always
 
-  hijacker-pin2flag:
-    build: 
-      context: hijacker-pin2flag
-      dockerfile: Dockerfile
-    environment:
-      - FLAG=INTECHFEST{T4pj4ck1ng_In_Andr01d?!?!}
-      - POW_DIFFICULTY=250000
-      - PIN=558102
-    ports:
-      - "53655:5001"
-    restart: always
-
 networks:
   default:
     driver: bridge

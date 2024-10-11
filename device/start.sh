@@ -23,7 +23,8 @@ function start_emulator() {
     accel_option="-no-accel"
   fi
 
-  emulator -avd "$EMULATOR_NAME" -writable-system -no-window -noaudio -no-boot-anim -memory 2048 $accel_option &
+  # Adjust the RAM size as needed
+  emulator -avd "$EMULATOR_NAME" -writable-system -no-window -noaudio -no-boot-anim -memory 8192 $accel_option &
 };
 
 function wait_for_device() {

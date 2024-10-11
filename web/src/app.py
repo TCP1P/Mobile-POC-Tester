@@ -42,7 +42,7 @@ class QueueThread(Thread):
                     try:
                         q.status = Status.INITIALIZING
 
-                        # run_adb(['uninstall', q.client.MAIN_PACKAGE_NAME])
+                        run_adb(['uninstall', q.client.MAIN_PACKAGE_NAME])
                         
                         out, err = run_adb(['shell', 'pm', 'list', 'packages', q.client.MAIN_PACKAGE_NAME])
                         if q.client.MAIN_PACKAGE_NAME not in out:
