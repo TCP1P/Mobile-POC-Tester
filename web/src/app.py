@@ -86,9 +86,9 @@ class QueueThread(Thread):
 
                             q.status = Status.TAKING_SCREENSHOT
 
-                            run_adb(['shell', 'screencap', '-p', f'/data/local/tmp/{q.id}'])
-                            run_adb(['pull', f'/data/local/tmp/{q.id}', f'screenshots/{q.id}.png'])
-                            run_adb(['shell', 'rm', '-f', f'/data/local/tmp/{q.id}'])
+                            run_adb(['shell', 'screencap', '-p', f'/data/local/tmp/{q.id}.png'])
+                            run_adb(['pull', f'/data/local/tmp/{q.id}.png', f'screenshots/{q.id}.png'])
+                            run_adb(['shell', 'rm', '-f', f'/data/local/tmp/{q.id}.png'])
 
                             q.status = Status.COMPLETED
                     except Exception as e:
