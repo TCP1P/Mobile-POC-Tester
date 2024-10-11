@@ -1,8 +1,12 @@
 import traceback
+
 from typing import List
 from flask import Flask, render_template, request, jsonify, send_file, session
 from threading import Thread
 from time import sleep
+from gevent import pywsgi
+from geventwebsocket.handler import WebSocketHandler
+
 import os
 import uuid
 import re
@@ -186,4 +190,10 @@ if __name__ == '__main__':
     queue_thread = QueueThread()
     queue_thread.start()
 
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    print('Server is running on http://0.0.0.0:5000!')
+
+    if not DEV:
+        from waitress import serve
+        serve(app, host='0.0.0.0', port=5000)
+    else:
+        app.run(host='0.0.0.0', port=5000, debug=True)
