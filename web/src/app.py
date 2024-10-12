@@ -52,7 +52,7 @@ class QueueThread(Thread):
                         for c in clients:
                             stop_app(c.MAIN_PACKAGE_NAME)
 
-                        run_adb(['uninstall', q.client.MAIN_PACKAGE_NAME])
+                        # run_adb(['uninstall', q.client.MAIN_PACKAGE_NAME])
                         
                         out, err = run_adb(['shell', 'pm', 'list', 'packages', q.client.MAIN_PACKAGE_NAME])
                         if q.client.MAIN_PACKAGE_NAME not in out:
@@ -78,7 +78,7 @@ class QueueThread(Thread):
 
                         if package_name == q.client.MAIN_PACKAGE_NAME:
                             q.status = Status.ERROR
-                            q.error = 'Your poc can\' use the same package name as the challenge\'s!'
+                            q.error = 'Your poc can\'t use the same package name as the challenge\'s!'
                             continue
 
                         out, err = run_adb(['install', '-r', f'uploads/{q.id}.apk'])
