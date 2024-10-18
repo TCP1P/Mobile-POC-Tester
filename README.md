@@ -21,12 +21,14 @@ To install the POC tester, follow these steps:
 3. Run Docker Compose:
 
     ```bash
-    docker compose up --build --force-recreate
+    bash ./run.sh
     ```
 
 4. Open your browser and go to port 5000:
 
     ![alt text](image.png)
+
+> note: for example challenge configuration, you can refer to this branch https://github.com/TCP1P/Mobile-POC-Tester/tree/example-challenge/web/src/challenges
 
 ## Usage
 
