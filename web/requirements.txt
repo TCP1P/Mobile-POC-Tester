@@ -1,0 +1,4 @@
+flask==3.0.0
+flask-socketio==5.3.6
+pycryptodome==3.19.0
+lamda==8.40

@@ -1,0 +1,158 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sekaibank-poc
+  annotations:
+    release_time: "2025-08-16T01:00:00Z"
+spec:
+  type: NodePort
+  selector:
+    category: misc
+    challenge: sekaibank-poc
+  ports:
+  - name: https
+    port: 5000
+    targetPort: 5000
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-vpn-to-sekaibank-poc-adm
+spec:
+  podSelector:
+    matchLabels:
+      category: misc
+      challenge: sekaibank-poc
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - ipBlock:
+        cidr: 10.128.0.7/32 # vpn-gw
+    ports:
+    - protocol: TCP
+      port: 65000
+  - from:
+    - ipBlock:
+        cidr: 10.128.0.13/32 # haproxy
+    ports:
+    - protocol: TCP
+      port: 5000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sekaibank-poc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      category: misc
+      challenge: sekaibank-poc
+  template:
+    metadata:
+      labels:
+        category: misc
+        challenge: sekaibank-poc
+        egress: allow
+    spec:
+      enableServiceLinks: false
+      automountServiceAccountToken: false
+      hostname: sekaibank-poc
+      volumes:
+      - name: kvm
+        hostPath:
+          path: /dev/kvm
+          type: CharDevice
+
+      containers:
+      - name: device
+        image: us-central1-docker.pkg.dev/sekaictf-462901/sekaictf/misc_sekaibank-transaction-poc-device:latest
+        imagePullPolicy: Always
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /dev/kvm
+          name: kvm
+        env:
+        - name: MAX_MEMORY
+          value: "8192"
+        resources:
+          requests:
+            cpu: 1m
+            memory: 1Mi
+          limits:
+            cpu: "8"
+            memory: 8Gi
+        ports:
+        - name: http
+          containerPort: 65000
+        readinessProbe:
+          exec:
+            command:
+              - sh
+              - -c
+              - test -f /app/device_ready && test "$(cat /app/device_ready)" = "1" || exit 1
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 10
+
+      - name: web
+        image: us-central1-docker.pkg.dev/sekaictf-462901/sekaictf/misc_sekaibank-transaction-poc-web:latest
+        imagePullPolicy: Always
+        env:
+        - name: DEBUG
+          value: "false"
+        - name: SECRET_KEY
+          value: h6tF6QMw3C8Pz2kI
+        - name: LOG_LEVEL
+          value: INFO
+        - name: WEB_PORT
+          value: "5000"
+        - name: MAX_FILE_SIZE
+          value: "100"
+        - name: UPLOAD_RETENTION_HOURS
+          value: "1"
+        - name: SCREENSHOT_RETENTION_HOURS
+          value: "24"
+        - name: MAX_QUEUE_SIZE
+          value: "100"
+        - name: QUEUE_CLEANUP_INTERVAL
+          value: "3600"
+        - name: QUEUE_RETENTION_HOURS
+          value: "1"
+        - name: ADB_TIMEOUT
+          value: "30"
+        - name: PROCESS_TIMEOUT
+          value: "30"
+        - name: APK_INSTALL_TIMEOUT
+          value: "60"
+        - name: ENABLE_POW
+          value: "true"
+        - name: POW_DIFFICULTY
+          value: "250000"
+        - name: ADB_HOST
+          value: "127.0.0.1"
+        - name: ADB_PORT
+          value: "5037"
+        resources:
+          requests:
+            cpu: 1m
+            memory: 1Mi
+          limits:
+            cpu: "4"
+            memory: 4Gi
+        ports:
+        - name: http
+          containerPort: 5000
+        readinessProbe:
+          exec:
+            command:
+              - curl
+              - -f
+              - http://localhost:5000/
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 10

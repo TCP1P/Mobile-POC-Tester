@@ -1,8 +1,23 @@
 #!/bin/bash
 
-function kill_emulator() {
-  adb devices | grep emulator | cut -f1 | xargs -I {} adb -s "{}" emu kill
+function kill_adb() {
+  echo "[i] Killing ADB..."
+  pkill -f "adb.*server" 2>/dev/null
+  sleep 2
+  pkill -9 -f "adb.*server" 2>/dev/null
 };
+
+function start_adb() {
+  echo "[i] Starting ADB..."
+  nohup adb -a -P 5037 nodaemon server > adb.log 2>&1 &
+};
+
+function kill_emulator() {
+  echo "[i] Killing emulator..."
+  pkill -f "qemu-system-x86_64.*${EMULATOR_NAME}" 2>/dev/null
+  sleep 2
+  pkill -9 -f "qemu-system-x86_64.*${EMULATOR_NAME}" 2>/dev/null
+}
 
 function start_emulator() {
   echo "[i] Starting emulator..."
@@ -23,54 +38,43 @@ function start_emulator() {
     accel_option="-no-accel"
   fi
 
-  # Adjust the RAM size as needed
-  emulator -avd "$EMULATOR_NAME" -writable-system -no-window -noaudio -no-boot-anim -memory $MAX_MEMORY $accel_option &
+  nohup emulator -avd "$EMULATOR_NAME" -writable-system -no-window -noaudio -no-boot-anim -memory $MAX_MEMORY $accel_option > emulator.log 2>&1 &
 };
 
 function wait_for_device() {
   echo "[i] Waiting for device..."
-
   adb wait-for-device
-
   while [ "$(adb get-state)" == "offline" ]; do
       sleep 1
   done
 };
 
 function start_device() {
-  echo "[i] Starting device..."
-
-  adb -a -P 5037 nodaemon server 2>&1 > /dev/null &
-  sleep 2.5
-
-  kill_emulator
   start_emulator
   wait_for_device
 
-  echo "[i] Disabling security..."
+  if [ "$1" == "true" ]; then
+    echo "[i] Disabling security..."
 
-  adb root
-  sleep 2.5
+    adb root
+    sleep 2.5
 
-  adb shell avbctl disable-verification
-  adb disable-verity
+    adb shell avbctl disable-verification
+    adb disable-verity
 
-  echo "[i] Rebooting device..."
-  adb reboot
+    echo "[i] Rebooting device..."
+    adb reboot
 
-  wait_for_device
+    wait_for_device
+  fi
 
-  while true; do
-      result=$(adb shell getprop sys.boot_completed 2>&1)
-
-      if [ "$result" == "1" ]; then
-          break
-      fi
-
+  while [ "$(adb shell getprop sys.boot_completed 2>&1)" != "1" ]; do
       sleep 1
-  done;
+  done
 
-  echo "[i] Initializing device..."
+  echo "[i] Device booted!"
+
+  echo "[i] Setting up device..."
 
   adb root
   sleep 2.5
@@ -80,54 +84,76 @@ function start_device() {
   adb remount
   sleep 2.5
 
-  if [ -n "$SU_NAME" ]; then
-      echo "SU_PATH exists: $SU_NAME"
+  echo "[i] Setting up lamda..."
 
-      adb shell mv "/system/xbin/su" "/system/xbin/$SU_NAME"
+  adb push lamda-server-x86_64.tar.gz /data
+  adb shell tar -zxf /data/lamda-server-x86_64.tar.gz -C /data
+  adb shell chmod +x /data/server/bin/launch.sh
+  adb shell "cd /data/server/bin; ./launch.sh"
+  adb forward tcp:65010 tcp:65000
+  nohup socat TCP-LISTEN:65000,bind=0.0.0.0,reuseaddr,fork TCP:127.0.0.1:65010 > socat.log 2>&1 &
 
-      adb shell chmod 711 /system/xbin
+  echo "[i] Locking 'su' binary..."
 
-      echo "su moved to /system/xbin/$SU_NAME and permissions set on /system/xbin."
-  else
-      echo "Error: SU_PATH does not exist or is not set."
-      exit 1
-  fi
+  adb shell chown root:shell /system/xbin/su
+  adb shell chmod 6750 /system/xbin/su
 
+  echo "[i] Disabling virtual keyboard..."
+
+  adb shell pm disable-user com.google.android.inputmethod.latin
+  adb shell pm disable-user com.google.android.tts
+  adb shell pm disable-user com.google.android.googlequicksearchbox
+
+  echo 1 > /app/device_ready
   echo "[i] Device is ready!"
 };
 
 function main() {
-  start_device
+  kill_adb
+  start_adb
+  kill_emulator
+  start_device true
 
   while true; do
-    if [[ $(ps aux | grep emulator | grep -v grep | wc -l) -eq 0 ]]; then
-      echo "[i] Emulator is not running, restarting emulator..."
-
-      start_device
-    fi
-
-    if [[ $(adb devices | grep emulator | wc -l) -eq 0 ]]; then
-      echo "[i] Device is not connected, restarting emulator..."
-
+    if ! pgrep -f "qemu-system-x86_64.*${EMULATOR_NAME}" > /dev/null; then
+      echo "[i] Main emulator process not running, restarting emulator..."
       kill_emulator
-
       sleep 2.5
-
-      start_device
+      start_device false
     fi
 
-    if [[ $(ps aux | grep adb | grep -v grep | wc -l) -eq 0 ]] || [[ $(lsof -i :5037 | grep LISTEN | wc -l) -eq 0 ]]; then
-      echo "[i] ADB is not running, restarting ADB..."
-
-      adb kill-server
-
+    if ! pgrep -f "adb.*server" > /dev/null; then
+      echo "[i] ADB server not running, restarting emulator..."
+      kill_emulator
       sleep 2.5
+      start_device false
+    fi
 
-      adb -a -P 5037 nodaemon server 2>&1 > /dev/null &
+    local connected_devices=$(adb devices | grep emulator | grep device | wc -l)
+    if [[ $connected_devices -eq 0 ]]; then
+      echo "[i] No devices connected, restarting emulator..."
+      kill_emulator
+      sleep 2.5
+      start_device false
+    else
+      local device_id=$(adb devices | grep emulator | grep device | head -n1 | cut -f1)
+      if ! timeout 10 adb -s "$device_id" shell echo "test" > /dev/null 2>&1; then
+        echo "[i] Device unresponsive, restarting emulator..."
+        kill_emulator
+        sleep 2.5
+        start_device false
+      fi
+    fi
+
+    if ! timeout 5 curl -s --connect-timeout 3 http://localhost:65000 > /dev/null 2>&1; then
+      echo "[i] Lamda service not responding, restarting emulator..."
+      kill_emulator
+      sleep 2.5
+      start_device false
     fi
 
     sleep 5
-  done;
+  done
 };
 
 main
